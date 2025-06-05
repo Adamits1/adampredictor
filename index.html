@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Adam Predictor</title>
+  <style>
+    :root {
+      --safe-color: #28a745;
+      --bg-color: #141e30;
+      --grid-gap: 4px;
+      --cell-size: min(60px, 20vw);
+      --glow-gold: 0 0 15px 5px rgba(255, 215, 0, 0.75);
+      --glow-silver: 0 0 15px 5px rgba(192, 192, 192, 0.75);
+      --risk-colors: linear-gradient(to right, #28a745, #ffd500, #ff4800);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      background: linear-gradient(to bottom right, var(--bg-color), #243b55);
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+      text-align: center;
+      padding: 1rem;
+    }
+    body {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    #mainContent {
+      max-width: 900px;
+      width: 90vw;
+      margin: 3rem auto 4rem auto;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      margin-bottom: 1rem;
+    }
+    label {
+      font-size: 1rem;
+    }
+    select, input[type="number"] {
+      margin-left: 0.5rem;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      background-color: #444;
+      color: white;
+      user-select: none;
+    }
+    button {
+      display: block;
+      margin: 1rem auto 0;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      background-color: #00bcd4;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
+    button:hover {
+      background-color: #0097a7;
+    }
+    /* LOGIN OVERLAY */
+    #loginOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(20, 30, 48, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      user-select: none;
+    }
+    #loginOverlay label {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    #loginOverlay input {
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      width: 200px;
+      max-width: 80%;
+      margin-bottom: 1rem;
+      user-select: text;
+    }
+    /* WELCOME MESSAGE */
+    #welcomeMsg {
+      font-size: 1.3rem;
+      margin-bottom: 1.5rem;
+    }
+    /* MAIN SECTIONS */
+    .section {
+      background: rgba(255 255 255 / 0.05);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      user-select: none;
+    }
+    /* COIN-FLIP */
+    .coin-container {
+      perspective: 1000px;
+      width: 150px;
+      height: 150px;
+      margin: 1rem auto;
+      user-select: none;
+    }
+    .coin {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: none;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      background: radial-gradient(circle at top left, #d4af37 60%, #a67c00);
+      cursor: pointer;
+    }
+    .coin-side {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.3rem;
+      font-weight: 900;
+      backface-visibility: hidden;
+      text-shadow: 0 0 5px rgba(0,0,0,0.5);
+      user-select: none;
+    }
+    .heads {
+      background: radial-gradient(circle at top left, gold 60%, #b8860b);
+      color: black;
+      box-shadow: var(--glow-gold);
+      transition: box-shadow 0.6s ease;
+    }
+    .tails {
+      background: radial-gradient(circle at top left, silver 60%, #aaa);
+      color: black;
+      transform: rotateY(180deg);
+      box-shadow: var(--glow-silver);
+      transition: box-shadow 0.6s ease;
+    }
+    .glow-gold {
+      box-shadow: 0 0 30px 12px rgba(255, 215, 0, 0.9);
+    }
+    .glow-silver {
+      box-shadow: 0 0 30px 12px rgba(192, 192, 192, 0.9);
+    }
+    @keyframes decelFlip {
+      from { transform: rotateY(0deg); }
+      to   { transform: rotateY(var(--final-rotation)); }
+    }
+    /* MINE PREDICTOR */
+    .mine-grid {
+      display: grid;
+      grid-template-columns: repeat(5, min(60px, 20vw));
+      gap: var(--grid-gap);
+      justify-content: center;
+      margin-top: 1rem;
+      user-select: none;
+    }
+    .cell {
+      width: min(60px, 20vw);
+      height: min(60px, 20vw);
+      background-color: #1e1e1e;
+      border-radius: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+      transition: transform 0.4s ease, background-color 0.3s;
+      transform: scale(1);
+      user-select: none;
+      box-shadow: inset 0 0 4px #000;
+    }
+    .safe {
+      background-color: var(--safe-color);
+      animation: popIn 0.4s ease-out;
+      color: white;
+      box-shadow:
+        0 0 8px 2px rgba(40, 167, 69, 0.7),
+        inset 0 0 6px 2px rgba(40, 167, 69, 0.5);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    /* UPGRADER HELPER */
+    #upgradeSection input[type="number"] {
+      width: 80px;
+    }
+    #riskLevel {
+      font-weight: 700;
+      font-size: 1.3rem;
+      margin-top: 1rem;
+      user-select: text;
+    }
+    /* DROPDOWN MENU */
+    #predictorSelect {
+      font-size: 1.2rem;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: none;
+      background-color: #00bcd4;
+      color: white;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      cursor: pointer;
+      user-select: none;
+      max-width: 100%;
+      width: 320px;
+    }
+    #predictorSelect option {
+      background: #141e30;
+      color: white;
+    }
+    /* RESPONSIVE */
+    @media (max-width: 500px) {
+      h1 { font-size: 2rem; }
+      .coin-container {
+        width: 120px;
+        height: 120px;
+      }
+      #predictorSelect {
+        width: 100%;
+      }
+      .cell {
+        width: 50px;
+        height: 50px;
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- LOGIN -->
+  <div id="loginOverlay">
+    <label for="usernameInput">Enter your username:</label>
+    <input type="text" id="usernameInput" placeholder="Username" />
+    <button onclick="handleLogin()">Login</button>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="mainContent" style="display: none;">
+    <h1>Adam Predictor</h1>
+    <div id="welcomeMsg"></div>
+
+    <select id="predictorSelect" aria-label="Select Predictor">
+      <option value="coinflip">🪙 Coinflip Predictor</option>
+      <option value="mine">💣 Mine Predictor</option>
+      <option value="upgrader">⚙️ Upgrader Helper</option>
+    </select>
+
+    <!-- Coinflip Section -->
+    <div id="coinflipSection" class="section">
+      <h2>🪙 Coinflip Predictor</h2>
+      <div class="coin-container">
+        <div class="coin" id="coin" title="Click to Flip">
+          <div class="coin-side heads">GOLD</div>
+          <div class="coin-side tails">SILVER</div>
+        </div>
+      </div>
+      <button onclick="flipCoin()">Flip Coin</button>
+    </div>
+
+    <!-- Mine Predictor Section -->
+    <div id="mineSection" class="section" style="display:none;">
+      <h2>💣 Mine Predictor</h2>
+      <label for="mineCount">Number of Mines:</label>
+      <select id="mineCount">
+        <option value="1">1</option>
+        <option value="3">3</option>
+        <option value="6">6</option>
+        <option value="12">12</option>
+      </select>
+      <button onclick="generateMines()">Predict Safe Spots</button>
+      <div class="mine-grid" id="mineGrid"></div>
+    </div>
+
+    <!-- Upgrader Helper Section -->
+    <div id="upgradeSection" class="section" style="display:none;">
+      <h2>⚙️ Upgrader Helper</h2>
+      <label for="successChance">Upgrade Success Chance (%):</label>
+      <input type="number" id="successChance" min="0" max="100" step="1" placeholder="e.g. 75" />
+      <button onclick="evaluateRisk()">Check Risk</button>
+      <div id="riskLevel" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    // LOGIN HANDLING
+    function handleLogin() {
+      const input = document.getElementById('usernameInput');
+      const username = input.value.trim();
+      if (!username) {
+        alert('Please enter a username.');
+        return;
+      }
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      document.getElementById('welcomeMsg').textContent = `Welcome, ${username}!`;
+    }
+
+    // PREDICTOR SWITCHING
+    const predictorSelect = document.getElementById('predictorSelect');
+    const coinflipSection = document.getElementById('coinflipSection');
+    const mineSection = document.getElementById('mineSection');
+    const upgradeSection = document.getElementById('upgradeSection');
+
+    predictorSelect.addEventListener('change', () => {
+      const val = predictorSelect.value;
+      coinflipSection.style.display = 'none';
+      mineSection.style.display = 'none';
+      upgradeSection.style.display = 'none';
+
+      if (val === 'coinflip') coinflipSection.style.display = 'block';
+      else if (val === 'mine') mineSection.style.display = 'block';
+      else if (val === 'upgrader') upgradeSection.style.display = 'block';
+    });
+
+    // COIN FLIP LOGIC
+    const coin = document.getElementById('coin');
+    const headsSide = coin.querySelector('.heads');
+    const tailsSide = coin.querySelector('.tails');
+
+    function flipCoin() {
+      headsSide.classList.remove('glow-gold');
+      tailsSide.classList.remove('glow-silver');
+
+      const isHeads = Math.random() < 0.5;
+      const spins = 4;
+      const endRotation = spins * 360 + (isHeads ? 0 : 180);
+
+      coin.style.animation = 'none';
+      coin.offsetHeight; // trigger reflow
+
+      coin.style.setProperty('--final-rotation', `${endRotation}deg`);
+      coin.style.animation = 'decelFlip 2s ease-out forwards';
+
+      function onAnimationEnd() {
+        if (isHeads) headsSide.classList.add('glow-gold');
+        else tailsSide.classList.add('glow-silver');
+        coin.removeEventListener('animationend', onAnimationEnd);
+      }
+      coin.addEventListener('animationend', onAnimationEnd);
+    }
+    coin.addEventListener('click', flipCoin);
+
+    // MINE PREDICTOR LOGIC
+    function generateMines() {
+      const grid = document.getElementById('mineGrid');
+      const mineCount = parseInt(document.getElementById('mineCount').value);
+      const totalCells = 25;
+
+      let safeCount;
+      if (mineCount === 1) safeCount = 6;
+      else if (mineCount === 3) safeCount = 4;
+      else if (mineCount === 6) safeCount = 2;
+      else safeCount = 1;
+
+      const safeIndexes = new Set();
+      while (safeIndexes.size < safeCount) {
+        safeIndexes.add(Math.floor(Math.random() * totalCells));
+      }
+
+      grid.innerHTML = '';
+      for (let i = 0; i < totalCells; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        if (safeIndexes.has(i)) {
+          cell.classList.add('safe');
+          cell.textContent = '✓';
+        }
+        grid.appendChild(cell);
+      }
+    }
+
+    // UPGRADER HELPER LOGIC
+    function evaluateRisk() {
+      const input = document.getElementById('successChance');
+      const riskDiv = document.getElementById('riskLevel');
+      let val = parseFloat(input.value);
+
+      if (isNaN(val) || val < 0 || val > 100) {
+        riskDiv.textContent = 'Please enter a valid percentage between 0 and 100.';
+        riskDiv.style.color = 'red';
+        return;
+      }
+
+      // We define 10 risk levels, based on success chance.
+      // Higher success chance means lower risk.
+      // For example:
+      // 100% success chance -> Risk level 1 (lowest risk)
+      // 0% success chance -> Risk level 10 (highest risk)
+      const riskLevel = Math.min(10, Math.max(1, Math.ceil((100 - val) / 10)));
+
+      // Colors interpolate from green (low risk) to red (high risk) with yellow in middle.
+      // We'll create a function for this:
+      const color = riskColorGradient(riskLevel);
+
+      // Summary text
+      let summary = '';
+      if (riskLevel <= 3) summary = "Safe to upgrade 👍";
+      else if (riskLevel <= 7) summary = "Moderate risk, consider carefully ⚠️";
+      else summary = "High risk! Upgrade not recommended ❌";
+
+      riskDiv.textContent = `Risk Level: ${riskLevel} / 10 — ${summary}`;
+      riskDiv.style.color = color;
+    }
+
+    function riskColorGradient(level) {
+      // level 1 (safe) to 10 (risky)
+      // We'll interpolate RGB from green -> yellow -> red
+      // Green rgb(40, 167, 69), Yellow rgb(255, 213, 0), Red rgb(255, 72, 0)
+      // Levels 1-5: interpolate green to yellow
+      // Levels 6-10: interpolate yellow to red
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      if (level <= 5) {
+        // green to yellow
+        const t = (level - 1) / 4;
+        const r = Math.round(lerp(40, 255, t));
+        const g = Math.round(lerp(167, 213, t));
+        const b = Math.round(lerp(69, 0, t));
+        return `rgb(${r},${g},${b})`;
+      } else {
+        // yellow to red
+        const t = (level - 6) / 4;
+        const r = Math.round(lerp(255, 255, t));
+        const g = Math.round(lerp(213, 72, t));
+        const b = Math.round(lerp(0, 0, t));
+        return `rgb(${r},${g},${b})`;
+      }
+    }
+  </script>
+</body>
+</html>

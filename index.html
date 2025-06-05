@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Adam Predictor V2</title>
+  <title>Adam Predictor V2.5</title>
   <style>
     :root {
       --safe-color: #28a745;
@@ -426,9 +426,12 @@
 
       // Summary text
       let summary = '';
-      if (riskLevel <= 3) summary = "Safe to upgrade 👍";
-      else if (riskLevel <= 7) summary = "Moderate risk, consider carefully ⚠️";
-      else summary = "High risk! Upgrade not recommended ❌";
+      if (riskLevel <= 2) summary = "Low risk, upgrade anything 👍";
+      else if (riskLevel <= 4) summary = "Kinda low risk, upgrade max $100k worth skins👍";
+      else if (riskLevel <= 6) summary = "Medium risk, upgrade max $65k worth skins ⚠️";
+      else if (riskLevel <= 8) summary = "Above medium risk, upgrade max $35k worth skins ⚠️";
+      else if (riskLevel <= 9) summary = "High risk, upgrade max $10k worth skins ⚠️";
+      else summary = "Super High risk! Upgrade not recommended ❌";
 
       riskDiv.textContent = `Risk Level: ${riskLevel} / 10 — ${summary}`;
       riskDiv.style.color = color;
@@ -462,6 +465,5 @@
       }
     }
   </script>
-</body>
-</html>
+
 
